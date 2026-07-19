@@ -15,16 +15,14 @@ LINE_USER_ID = os.getenv("LINE_USER_ID") # 送信先のユーザーID
 openai.api_key = OPENAI_API_KEY
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 
-def generate_x_posts(today_date, time_slot):
+def generate_x_posts(today_date):
     prompt = f"""
-あなたはVF高西という自動車整備士です。X（旧Twitter）のポストを考えてください。
+あなたはVF高西という自動車整備士です。X（旧Twitter）のポストを1日分（朝・昼・夕方の3つ）考えてください。
 ポストの目的はVF高西の認知を広げてnoteやpodcastへ導き、個人的にオファーをもらえるようにすることです。
 人間が日常的に使う会話調で、コピペできるようにテキストのみで提案してください。ポスト内容の意図は不要です。
 
-現在は【{time_slot}】の時間帯です。この時間帯に最適な内容を1つだけ作成してください。
-
 以下のルールを厳守してください。
-- 朝（6:30頃）: 認知獲得。毎回どこかに自動車、運転、整備の要素を入れる。
+- 朝（6:30頃）: 認知獲得。毎回どこかに自動車、運転、整備の要素を入れる。※挨拶（VF高西です、など）は不要。
 - 昼（11:30頃）: 完全にお役立ち情報。業界ニュース、法改正、暑さ寒さと車の注意点、整備の豆知識。
 - 夕方（17:30頃）: 人柄、現場感、相談歓迎の空気づくり。noteやpodcastへの誘導を最後に添える。
 - 事実確認を徹底し、経験していないエピソードや確認できないニュースへの言及は避ける。
@@ -38,6 +36,16 @@ def generate_x_posts(today_date, time_slot):
 - 改行を適度に入れて読みやすくする。
 
 今日の日付は {today_date} です。
+
+--- 形式 ---
+【朝のポスト案】
+（内容）
+
+【昼のポスト案】
+（内容）
+
+【夕方のポスト案】
+（内容）
 """
 
     response = openai.chat.completions.create(
@@ -47,7 +55,7 @@ def generate_x_posts(today_date, time_slot):
             {"role": "user", "content": prompt}
         ],
         temperature=0.7,
-        max_tokens=500,
+        max_tokens=1500,
     )
     return response.choices[0].message.content.strip()
 
@@ -60,29 +68,14 @@ def send_line_message(user_id, message_text):
 
 if __name__ == "__main__":
     # 日本時間 (JST) での現在時刻を取得
-    # GitHub ActionsのランナーはUTCなので、+9時間する
     now = datetime.datetime.utcnow() + datetime.timedelta(hours=9)
     today_str = now.strftime("%Y年%m月%d日（%A）")
-    current_hour = now.hour
-    current_minute = now.minute
     
-    time_slot = None
-    # 時間帯の判定 (余裕を持たせて前後1.5時間程度を許容)
-    if 5 <= current_hour <= 8:
-        time_slot = "朝"
-    elif 10 <= current_hour <= 13:
-        time_slot = "昼"
-    elif 16 <= current_hour <= 19:
-        time_slot = "夕方"
-    
-    if time_slot:
-        print(f"{today_str} {current_hour}:{current_minute} ({time_slot}) のXポスト案を生成中...")
-        posts = generate_x_posts(today_str, time_slot)
-        print("生成完了:\n", posts)
+    print(f"{today_str} の1日分のXポスト案を生成中...")
+    posts = generate_x_posts(today_str)
+    print("生成完了:\n", posts)
 
-        if LINE_USER_ID and LINE_CHANNEL_ACCESS_TOKEN:
-            send_line_message(LINE_USER_ID, posts)
-        else:
-            print("LINEの環境変数が設定されていません。")
+    if LINE_USER_ID and LINE_CHANNEL_ACCESS_TOKEN:
+        send_line_message(LINE_USER_ID, posts)
     else:
-        print(f"現在は {current_hour}:{current_minute} です。配信時間外（大幅な遅延など）のため、送信をスキップします。")
+        print("LINEの環境変数が設定されていません。")
