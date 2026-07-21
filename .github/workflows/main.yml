@@ -2,10 +2,10 @@ name: Daily X Post Generator
 
 on:
   schedule:
-    # 日本時間の毎朝6:00に実行 (UTCで前日21:00)
-    - cron: '0 21 * * *'
-    # 日本時間の毎朝6:15に予備実行 (UTCで前日21:15)
-    - cron: '15 21 * * *'
+    # 日本時間の毎朝4:00に実行 (UTCで前日19:00)
+    - cron: '0 19 * * *'
+    # 日本時間の毎朝4:15に予備実行 (UTCで前日19:15)
+    - cron: '15 19 * * *'
   workflow_dispatch: # 手動実行用
 
 jobs:
